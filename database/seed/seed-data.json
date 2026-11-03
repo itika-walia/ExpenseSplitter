@@ -1,0 +1,122 @@
+{
+  "users": [
+    { "name": "Aarav Sharma", "email": "aarav@example.com", "password": "password123" },
+    { "name": "Priya Patel", "email": "priya@example.com", "password": "password123" },
+    { "name": "Rohan Mehta", "email": "rohan@example.com", "password": "password123" },
+    { "name": "Sneha Iyer", "email": "sneha@example.com", "password": "password123" }
+  ],
+  "groups": [
+    {
+      "name": "Goa Trip 2026",
+      "createdBy": "aarav@example.com",
+      "members": [
+        { "name": "Priya Patel", "email": "priya@example.com" },
+        { "name": "Rohan Mehta", "email": "rohan@example.com" },
+        { "name": "Sneha Iyer", "email": "sneha@example.com" },
+        { "name": "Kabir Singh", "email": "kabir@example.com" }
+      ],
+      "expenses": [
+        {
+          "description": "Villa booking (3 nights)",
+          "amount": "12000",
+          "paidBy": "aarav@example.com",
+          "date": "2026-10-10",
+          "category": "ACCOMMODATION",
+          "splitType": "EQUAL",
+          "shares": [
+            { "email": "aarav@example.com" },
+            { "email": "priya@example.com" },
+            { "email": "rohan@example.com" },
+            { "email": "sneha@example.com" },
+            { "email": "kabir@example.com" }
+          ]
+        },
+        {
+          "description": "Seafood dinner at Baga",
+          "amount": "3450.50",
+          "paidBy": "priya@example.com",
+          "date": "2026-10-10",
+          "category": "FOOD",
+          "splitType": "EQUAL",
+          "shares": [
+            { "email": "aarav@example.com" },
+            { "email": "priya@example.com" },
+            { "email": "rohan@example.com" }
+          ]
+        },
+        {
+          "description": "Scooter rental",
+          "amount": "1000",
+          "paidBy": "rohan@example.com",
+          "date": "2026-10-11",
+          "category": "TRAVEL",
+          "splitType": "EQUAL",
+          "shares": [
+            { "email": "rohan@example.com" },
+            { "email": "sneha@example.com" },
+            { "email": "kabir@example.com" }
+          ]
+        },
+        {
+          "description": "Water sports package",
+          "amount": "4000",
+          "paidBy": "sneha@example.com",
+          "date": "2026-10-11",
+          "category": "ENTERTAINMENT",
+          "splitType": "EXACT",
+          "shares": [
+            { "email": "aarav@example.com", "value": "1500" },
+            { "email": "priya@example.com", "value": "1500" },
+            { "email": "sneha@example.com", "value": "1000" }
+          ]
+        },
+        {
+          "description": "Groceries and snacks",
+          "amount": "2000",
+          "paidBy": "aarav@example.com",
+          "date": "2026-10-12",
+          "category": "SHOPPING",
+          "splitType": "PERCENTAGE",
+          "shares": [
+            { "email": "aarav@example.com", "value": "40" },
+            { "email": "priya@example.com", "value": "30" },
+            { "email": "kabir@example.com", "value": "30" }
+          ]
+        }
+      ],
+      "settlements": [
+        {
+          "from": "rohan@example.com",
+          "to": "aarav@example.com",
+          "amount": "1500",
+          "date": "2026-10-14",
+          "note": "UPI transfer"
+        }
+      ]
+    },
+    {
+      "name": "Team Lunch - October",
+      "createdBy": "priya@example.com",
+      "members": [
+        { "name": "Aarav Sharma", "email": "aarav@example.com" },
+        { "name": "Rohan Mehta", "email": "rohan@example.com" }
+      ],
+      "expenses": [
+        {
+          "description": "Lunch at Truffles",
+          "amount": "1000",
+          "paidBy": "priya@example.com",
+          "date": "2026-10-20",
+          "category": "FOOD",
+          "splitType": "EQUAL",
+          "shares": [
+            { "email": "priya@example.com" },
+            { "email": "aarav@example.com" },
+            { "email": "rohan@example.com" }
+          ]
+        }
+      ],
+      "settlements": []
+    }
+  ]
+}

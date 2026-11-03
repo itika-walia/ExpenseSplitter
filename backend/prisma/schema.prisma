@@ -1,0 +1,121 @@
+// Expense Splitter data model.
+// Money is always stored as numeric(12,2) (Prisma Decimal), never Float.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// An account that can sign in. Access to a group is granted when the
+/// user's email matches one of the group's members.
+model User {
+  id           String   @id @default(cuid())
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  groupsCreated Group[] @relation("GroupCreator")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  createdById String?
+
+  createdBy   User?        @relation("GroupCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  members     Member[]
+  expenses    Expense[]
+  settlements Settlement[]
+
+  @@index([createdById])
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(100)
+  email     String   @db.VarChar(255)
+  groupId   String
+  createdAt DateTime @default(now())
+
+  group               Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  expensesPaid        Expense[]      @relation("ExpensePayer")
+  shares              ExpenseShare[]
+  settlementsPaid     Settlement[]   @relation("SettlementFrom")
+  settlementsReceived Settlement[]   @relation("SettlementTo")
+
+  @@unique([groupId, email])
+  @@index([email])
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+}
+
+enum ExpenseCategory {
+  FOOD
+  TRAVEL
+  ACCOMMODATION
+  ENTERTAINMENT
+  SHOPPING
+  UTILITIES
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  description String          @db.VarChar(200)
+  amount      Decimal         @db.Decimal(12, 2)
+  date        DateTime        @db.Date
+  splitType   SplitType       @default(EQUAL)
+  category    ExpenseCategory @default(OTHER)
+  groupId     String
+  paidById    String
+  createdAt   DateTime        @default(now())
+
+  group  Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy Member         @relation("ExpensePayer", fields: [paidById], references: [id], onDelete: Restrict)
+  shares ExpenseShare[]
+
+  @@index([groupId, date])
+  @@index([paidById])
+}
+
+model ExpenseShare {
+  id          String  @id @default(cuid())
+  expenseId   String
+  memberId    String
+  shareAmount Decimal @db.Decimal(12, 2)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@unique([expenseId, memberId])
+  @@index([memberId])
+}
+
+model Settlement {
+  id           String   @id @default(cuid())
+  fromMemberId String
+  toMemberId   String
+  amount       Decimal  @db.Decimal(12, 2)
+  date         DateTime @default(now())
+  note         String?  @db.VarChar(200)
+  groupId      String
+  createdAt    DateTime @default(now())
+
+  group      Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromMember Member @relation("SettlementFrom", fields: [fromMemberId], references: [id], onDelete: Restrict)
+  toMember   Member @relation("SettlementTo", fields: [toMemberId], references: [id], onDelete: Restrict)
+
+  @@index([groupId, date])
+  @@index([fromMemberId])
+  @@index([toMemberId])
+}

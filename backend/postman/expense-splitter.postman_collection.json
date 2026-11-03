@@ -1,0 +1,346 @@
+{
+  "info": {
+    "name": "Expense Splitter API",
+    "description": "End-to-end run of every REST endpoint with assertions. Run in order against a running API (baseUrl defaults to http://localhost:4000/api). Each run registers a fresh user so it can be repeated.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4000/api" }],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health check",
+      "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/health" },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('API is up', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "Register",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"name\": \"Postman User\", \"email\": \"{{email}}\", \"password\": \"password123\" }"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const run = Date.now();",
+              "pm.collectionVariables.set('run', run);",
+              "pm.collectionVariables.set('email', `postman.${run}@example.com`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('201 Created with token', () => {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.json().token).to.be.a('string');",
+              "});",
+              "pm.collectionVariables.set('token', pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/auth/login",
+        "body": { "mode": "raw", "raw": "{ \"email\": \"{{email}}\", \"password\": \"password123\" }" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK with token', () => {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Current user",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Returns the signed-in user', () => pm.response.to.have.status(200));"] }
+        }
+      ]
+    },
+    {
+      "name": "List groups without token (401)",
+      "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/groups" },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Unauthenticated request is rejected', () => pm.response.to.have.status(401));"] }
+        }
+      ]
+    },
+    {
+      "name": "Create group",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/groups",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Trip\",\n  \"members\": [\n    { \"name\": \"Bala\", \"email\": \"bala.{{run}}@example.com\" },\n    { \"name\": \"Chitra\", \"email\": \"chitra.{{run}}@example.com\" }\n  ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const group = pm.response.json().group;",
+              "pm.test('201 Created with creator + 2 members', () => {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(group.members).to.have.length(3);",
+              "});",
+              "pm.collectionVariables.set('groupId', group.id);",
+              "pm.collectionVariables.set('member1', group.members[0].id);",
+              "pm.collectionVariables.set('member2', group.members[1].id);",
+              "pm.collectionVariables.set('member3', group.members[2].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List groups",
+      "request": { "method": "GET", "url": "{{baseUrl}}/groups" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Lists the new group', () => {",
+              "  pm.response.to.have.status(200);",
+              "  const ids = pm.response.json().groups.map(g => g.id);",
+              "  pm.expect(ids).to.include(pm.collectionVariables.get('groupId'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add member",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/groups/{{groupId}}/members",
+        "body": { "mode": "raw", "raw": "{ \"name\": \"Dev\", \"email\": \"dev.{{run}}@example.com\" }" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] }
+        }
+      ]
+    },
+    {
+      "name": "Add duplicate member (409)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/groups/{{groupId}}/members",
+        "body": { "mode": "raw", "raw": "{ \"name\": \"Dev again\", \"email\": \"dev.{{run}}@example.com\" }" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Duplicate email is rejected', () => pm.response.to.have.status(409));"] }
+        }
+      ]
+    },
+    {
+      "name": "Add expense - Rs 1,000 split among 3",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/groups/{{groupId}}/expenses",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"description\": \"Dinner\",\n  \"amount\": \"1000\",\n  \"paidById\": \"{{member1}}\",\n  \"date\": \"2026-10-01\",\n  \"category\": \"FOOD\",\n  \"shares\": [ { \"memberId\": \"{{member1}}\" }, { \"memberId\": \"{{member2}}\" }, { \"memberId\": \"{{member3}}\" } ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const expense = pm.response.json().expense;",
+              "pm.test('Shares are 333.33, 333.33, 333.34', () => {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(expense.shares.map(s => s.shareAmount)).to.eql(['333.33', '333.33', '333.34']);",
+              "});",
+              "pm.collectionVariables.set('expenseId', expense.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add expense - invalid amount (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/groups/{{groupId}}/expenses",
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"description\": \"Bad\", \"amount\": \"10.999\", \"paidById\": \"{{member1}}\", \"date\": \"2026-10-01\", \"shares\": [ { \"memberId\": \"{{member1}}\" } ] }"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Validation error names the amount field', () => {",
+              "  pm.response.to.have.status(400);",
+              "  pm.expect(pm.response.json().error.details[0].path).to.eql('amount');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get group",
+      "request": { "method": "GET", "url": "{{baseUrl}}/groups/{{groupId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Group has members and the expense', () => {",
+              "  pm.response.to.have.status(200);",
+              "  const group = pm.response.json().group;",
+              "  pm.expect(group.members).to.have.length(4);",
+              "  pm.expect(group.expenses).to.have.length(1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get balances",
+      "request": { "method": "GET", "url": "{{baseUrl}}/groups/{{groupId}}/balances" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('Net balances sum to exactly zero', () => {",
+              "  const sum = body.balances.reduce((total, b) => total + Math.round(Number(b.net) * 100), 0);",
+              "  pm.expect(sum).to.eql(0);",
+              "});",
+              "pm.test('Settle-up uses at most members - 1 payments', () => {",
+              "  pm.expect(body.suggestions.length).to.be.at.most(body.balances.length - 1);",
+              "});",
+              "pm.collectionVariables.set('suggestion', JSON.stringify(body.suggestions[0]));",
+              "pm.collectionVariables.set('suggestionCount', body.suggestions.length);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Record settlement",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/groups/{{groupId}}/settlements",
+        "body": { "mode": "raw", "raw": "{{suggestion}}" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] }
+        }
+      ]
+    },
+    {
+      "name": "Balances update immediately",
+      "request": { "method": "GET", "url": "{{baseUrl}}/groups/{{groupId}}/balances" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const before = Number(pm.collectionVariables.get('suggestionCount'));",
+              "pm.test('One fewer payment is needed', () => {",
+              "  pm.expect(pm.response.json().suggestions.length).to.eql(before - 1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Export expenses CSV",
+      "request": { "method": "GET", "url": "{{baseUrl}}/groups/{{groupId}}/expenses/export" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns CSV', () => {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv');",
+              "  pm.expect(pm.response.text()).to.include('\"Dinner\"');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete expense",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/expenses/{{expenseId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"] }
+        }
+      ]
+    },
+    {
+      "name": "Delete expense again (404)",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/expenses/{{expenseId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Already deleted', () => pm.response.to.have.status(404));"] }
+        }
+      ]
+    }
+  ]
+}
